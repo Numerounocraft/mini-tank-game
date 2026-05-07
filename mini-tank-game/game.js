@@ -8,10 +8,9 @@ import { AISystem }        from './systems/AISystem.js';
 import { RenderSystem }    from './systems/RenderSystem.js';
 import { NetworkSystem }   from './systems/NetworkSystem.js';
 
-// Set to your Railway URL after deploying the server, e.g. 'wss://mini-tank.up.railway.app'
 const WS_SERVER = window.location.hostname === 'localhost'
   ? `ws://${window.location.host}`
-  : 'wss://REPLACE_WITH_RAILWAY_URL';
+  : 'wss://mini-tank-game.up.railway.app';
 
 const CANVAS_W = 800;
 const CANVAS_H = 600;
