@@ -8,6 +8,11 @@ import { AISystem }        from './systems/AISystem.js';
 import { RenderSystem }    from './systems/RenderSystem.js';
 import { NetworkSystem }   from './systems/NetworkSystem.js';
 
+// Set to your Railway URL after deploying the server, e.g. 'wss://mini-tank.up.railway.app'
+const WS_SERVER = window.location.hostname === 'localhost'
+  ? `ws://${window.location.host}`
+  : 'wss://REPLACE_WITH_RAILWAY_URL';
+
 const CANVAS_W = 800;
 const CANVAS_H = 600;
 const TILE     = 40;
@@ -74,8 +79,10 @@ class Game {
     this.ai           = new AISystem();
 
     // Game mode: 'single' | 'multi' | 'online'
-    this.gameMode = 'single';
-    this.player2  = null;
+    this.gameMode    = 'single';
+    this.player2     = null;
+    this.player2Mode = 'local'; // 'local' | 'ai'
+    this.aiP2        = null;
 
     // Online networking
     this.network      = null;
@@ -143,6 +150,18 @@ class Game {
         return;
       }
 
+      // ── 2-player sub-menu ──────────────────────────────────────────────────
+      if (this.state === 'multi_menu') {
+        if (e.code === 'KeyA') { this.player2Mode = 'ai'; this.startGame(); }
+        if (e.code === 'KeyO') {
+          this.gameMode     = 'online';
+          this.networkError = '';
+          this.state        = 'online_menu';
+        }
+        if (e.code === 'Escape') this.state = 'start';
+        return;
+      }
+
       // ── Hosting: ESC cancels ────────────────────────────────────────────────
       if (this.state === 'hosting') {
         if (e.code === 'Escape') {
@@ -169,15 +188,13 @@ class Game {
       if (this.state === 'start') {
         if (e.code === 'Digit1' || e.code === 'Numpad1') this.gameMode = 'single';
         if (e.code === 'Digit2' || e.code === 'Numpad2') this.gameMode = 'multi';
-        if (e.code === 'Digit3' || e.code === 'Numpad3') this.gameMode = 'online';
       }
 
       if (e.code !== 'Enter') return;
 
       if (this.state === 'start') {
-        if (this.gameMode === 'online') {
-          this.networkError = '';
-          this.state = 'online_menu';
+        if (this.gameMode === 'multi') {
+          this.state = 'multi_menu';
         } else {
           this.startGame();
         }
@@ -203,7 +220,9 @@ class Game {
 
   _saveScore() {
     const name = this.nameInput.trim() || 'Anonymous';
-    const mode = this.gameMode === 'multi' ? '2P' : this.gameMode === 'online' ? 'NET' : '1P';
+    const mode = this.gameMode === 'multi'
+      ? (this.player2Mode === 'ai' ? '2P+AI' : '2P')
+      : this.gameMode === 'online' ? 'NET' : '1P';
     this.scores.push({ name, score: this.pendingScore, mode });
     this.scores.sort((a, b) => b.score - a.score);
     this.scores = this.scores.slice(0, 10);
@@ -219,7 +238,7 @@ class Game {
     this.network      = new NetworkSystem();
     this.network.onEvent = (msg) => this._handleNetworkEvent(msg);
     try {
-      await this.network.connect(`ws://${window.location.host}`);
+      await this.network.connect(WS_SERVER);
       this.network.createRoom();
     } catch {
       this.networkError = 'Cannot connect to server';
@@ -234,7 +253,7 @@ class Game {
     this.network      = new NetworkSystem();
     this.network.onEvent = (msg) => this._handleNetworkEvent(msg);
     try {
-      await this.network.connect(`ws://${window.location.host}`);
+      await this.network.connect(WS_SERVER);
       this.network.joinRoom(code);
     } catch {
       this.networkError = 'Cannot connect to server';
@@ -346,6 +365,7 @@ class Game {
     this.walls         = buildWalls(MAP, TILE);
     this.bullets       = [];
     this.ai            = new AISystem();
+    this.aiP2          = this.player2Mode === 'ai' ? new AISystem() : null;
     this.recharging    = false;
     this.rechargeTimer = 0;
     this.enemies = ENEMY_SPAWNS.slice(0, cfg.enemyCount).map(s =>
@@ -390,6 +410,17 @@ class Game {
     tank.position.y = Math.max(hh, Math.min(CANVAS_H - hh, tank.position.y));
     this.walls.forEach(w => {
       if (this.collision.checkAABB(tank.bounds, w)) this.collision.resolveTankWall(tank, w);
+    });
+  }
+
+  _getNearestEnemy() {
+    const alive = this.enemies.filter(e => e.isAlive);
+    if (!alive.length) return null;
+    const px = this.player2.position.x, py = this.player2.position.y;
+    return alive.reduce((best, e) => {
+      const d1 = (e.position.x - px) ** 2 + (e.position.y - py) ** 2;
+      const d2 = (best.position.x - px) ** 2 + (best.position.y - py) ** 2;
+      return d1 < d2 ? e : best;
     });
   }
 
@@ -446,6 +477,13 @@ class Game {
           movement.updatePlayer(this.player2, dt, gi.up, gi.down, gi.left, gi.right);
           if (gi.fire) this._spawnBullet(this.player2);
           if (gi.flip) this.player2.rotation += Math.PI;
+        }
+      } else if (this.player2Mode === 'ai') {
+        // AI companion: targets nearest alive enemy
+        const target = this._getNearestEnemy();
+        if (target) {
+          const shouldFire = this.aiP2.update(this.player2, target, dt, movement);
+          if (shouldFire) this._spawnBullet(this.player2);
         }
       } else {
         // Local co-op: P2 uses WASD + F
@@ -543,6 +581,10 @@ class Game {
     }
     if (this.state === 'nameentry') {
       r.drawNameEntry(this.nameInput, this.pendingScore, this.scores);
+      return;
+    }
+    if (this.state === 'multi_menu') {
+      r.drawMultiMenu();
       return;
     }
     if (this.state === 'online_menu') {

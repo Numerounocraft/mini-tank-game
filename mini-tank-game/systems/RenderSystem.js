@@ -190,6 +190,57 @@ export class RenderSystem {
     ctx.textAlign = 'left';
   }
 
+  // ── 2-player sub-menu ──────────────────────────────────────────────────────
+
+  drawMultiMenu() {
+    const { ctx, canvas } = this;
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.88)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffe84a';
+    ctx.font = 'bold 38px monospace';
+    ctx.fillText('2 PLAYER MODE', cx, cy - 120);
+
+    ctx.fillStyle = '#444';
+    ctx.fillRect(cx - 200, cy - 98, 400, 1);
+
+    const btnW = 300, btnH = 60;
+
+    // AI companion button
+    ctx.fillStyle = '#2a5a3a';
+    ctx.fillRect(cx - btnW / 2, cy - 80, btnW, btnH);
+    ctx.strokeStyle = '#3aaa88';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx - btnW / 2, cy - 80, btnW, btnH);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 18px monospace';
+    ctx.fillText('A  —  AI Companion', cx, cy - 47);
+    ctx.fillStyle = '#888';
+    ctx.font = '12px monospace';
+    ctx.fillText('Computer controls P2  (fights for you)', cx, cy - 28);
+
+    // Online with friend button
+    ctx.fillStyle = '#2a3a6a';
+    ctx.fillRect(cx - btnW / 2, cy + 4, btnW, btnH);
+    ctx.strokeStyle = '#4488ff';
+    ctx.strokeRect(cx - btnW / 2, cy + 4, btnW, btnH);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 18px monospace';
+    ctx.fillText('O  —  Play with a Friend', cx, cy + 37);
+    ctx.fillStyle = '#888';
+    ctx.font = '12px monospace';
+    ctx.fillText('Each player on their own computer', cx, cy + 56);
+
+    ctx.fillStyle = '#555';
+    ctx.font = '13px monospace';
+    ctx.fillText('ESC — Back', cx, cy + 102);
+
+    ctx.textAlign = 'left';
+  }
+
   // ── Online lobby screens ────────────────────────────────────────────────────
 
   drawOnlineMenu(networkError) {
@@ -407,17 +458,16 @@ export class RenderSystem {
     ctx.fillText('WASD   Move', p2x, 97);
     ctx.fillText('F      Fire', p2x, 112);
 
-    // Mode selection buttons — three options
+    // Mode selection buttons — two options
     const btnY = 158;
-    const btnW = 100;
+    const btnW = 160;
     const btnH = 32;
-    const totalBtns = 3 * btnW + 2 * 8;
+    const totalBtns = 2 * btnW + 12;
     const btnStart = cx - totalBtns / 2;
 
     const modes = [
-      { key: 'single', label: '1  PLAYER',  color: '#3aaa88', x: btnStart },
-      { key: 'multi',  label: '2  PLAYERS', color: '#4488ff', x: btnStart + btnW + 8 },
-      { key: 'online', label: 'ONLINE',     color: '#ff8844', x: btnStart + (btnW + 8) * 2 },
+      { key: 'single', label: '1  —  SOLO',       color: '#3aaa88', x: btnStart },
+      { key: 'multi',  label: '2  —  MULTIPLAYER', color: '#4488ff', x: btnStart + btnW + 12 },
     ];
 
     ctx.lineWidth = 2;
@@ -436,7 +486,7 @@ export class RenderSystem {
     ctx.fillStyle = '#555';
     ctx.font = '11px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('Press 1 / 2 / 3 to select mode', cx, btnY + btnH + 15);
+    ctx.fillText('Press 1 / 2 to select mode', cx, btnY + btnH + 15);
 
     // Scoreboard
     const sepY = btnY + btnH + 30;

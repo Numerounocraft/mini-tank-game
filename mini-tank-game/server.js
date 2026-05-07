@@ -3,7 +3,7 @@ const fs        = require('fs');
 const path      = require('path');
 const WebSocket = require('ws');
 
-const PORT   = 8080;
+const PORT   = process.env.PORT || 8080;
 const STATIC = __dirname;
 
 const MIME = {
@@ -15,8 +15,9 @@ const MIME = {
 
 // ── Static file server ────────────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
-  const safe     = path.normalize(req.url.split('?')[0]);
-  const filePath = path.join(STATIC, safe === '/' ? 'index.html' : safe);
+  const rawPath  = req.url.split('?')[0];
+  const safe     = rawPath === '/' ? 'index.html' : path.normalize(rawPath);
+  const filePath = path.join(STATIC, safe);
 
   fs.readFile(filePath, (err, data) => {
     if (err) { res.writeHead(404); res.end('Not found'); return; }
