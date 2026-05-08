@@ -165,6 +165,7 @@ class Game {
       // ── Hosting: ESC cancels ────────────────────────────────────────────────
       if (this.state === 'hosting') {
         if (e.code === 'Escape') {
+          clearTimeout(this._hostTimeout);
           this.network?.disconnect();
           this.network = null;
           this.roomCode = '';
@@ -283,6 +284,7 @@ class Game {
         return;
       }
       case 'hosting':
+        clearTimeout(this._hostTimeout);
         this.network?.disconnect();
         this.network   = null;
         this.roomCode  = '';
@@ -388,6 +390,15 @@ class Game {
     try {
       await this.network.connect(WS_SERVER);
       this.network.createRoom();
+      // Bail out if the server never sends a room code within 8 s.
+      this._hostTimeout = setTimeout(() => {
+        if (this.state === 'hosting' && !this.roomCode) {
+          this.network?.disconnect();
+          this.network    = null;
+          this.networkError = 'Server did not respond — try again';
+          this.state      = 'online_menu';
+        }
+      }, 8000);
     } catch {
       this.networkError = 'Cannot connect to server';
       this.state = 'online_menu';
@@ -414,6 +425,7 @@ class Game {
     switch (msg.type) {
       case 'room_created':
         this.roomCode = msg.code;
+        clearTimeout(this._hostTimeout);
         // state stays 'hosting'; UI shows the code
         break;
 
@@ -441,8 +453,15 @@ class Game {
       case 'peer_disconnected':
         this.network?.disconnect();
         this.network = null;
-        this.networkError = 'Opponent disconnected';
-        this.state = 'start';
+        clearTimeout(this._hostTimeout);
+        if (this.state === 'hosting' || this.state === 'connecting') {
+          // Server connection dropped before a game started — stay on the menu
+          this.networkError = 'Connection lost — server may be unreachable';
+          this.state = 'online_menu';
+        } else {
+          this.networkError = 'Opponent disconnected';
+          this.state = 'start';
+        }
         break;
     }
   }
