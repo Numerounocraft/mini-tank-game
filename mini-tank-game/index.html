@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1, viewport-fit=cover">
   <title>Mini Tank Battle</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -10,6 +10,35 @@
   <div id="game-container">
     <canvas id="game-canvas"></canvas>
   </div>
+
+  <!-- Virtual D-pad (touch only, shown during gameplay) -->
+  <div id="dpad" class="touch-ctrl" hidden>
+    <button class="ctrl-btn" id="btn-up">▲</button>
+    <div class="dpad-middle">
+      <button class="ctrl-btn" id="btn-left">◄</button>
+      <div class="dpad-center"></div>
+      <button class="ctrl-btn" id="btn-right">►</button>
+    </div>
+    <button class="ctrl-btn" id="btn-down">▼</button>
+  </div>
+
+  <!-- Action buttons (touch only, shown during gameplay) -->
+  <div id="action-btns" class="touch-ctrl" hidden>
+    <button class="ctrl-btn" id="btn-flip">↩ FLIP</button>
+    <button class="ctrl-btn fire-btn" id="btn-fire">●</button>
+  </div>
+
+  <!-- Text input overlay for mobile code / name entry -->
+  <div id="text-overlay" hidden>
+    <div id="text-overlay-inner">
+      <p id="text-overlay-label"></p>
+      <input id="text-overlay-input" type="text"
+             autocomplete="off" autocorrect="off"
+             autocapitalize="characters" spellcheck="false">
+      <button id="text-overlay-submit">CONFIRM</button>
+    </div>
+  </div>
+
   <script type="module" src="game.js"></script>
 </body>
 </html>

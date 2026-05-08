@@ -2,20 +2,25 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   background: #0d0d0d;
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
   font-family: monospace;
   user-select: none;
   overflow: hidden;
+  touch-action: none;
 }
 
+/* ── Canvas container — scales to fit any screen ─────────────────── */
 #game-container {
   position: relative;
   border: 3px solid #333;
@@ -23,9 +28,229 @@ body {
     0 0 0 1px #111,
     0 0 40px rgba(0, 0, 0, 0.9),
     0 0 80px rgba(50, 200, 150, 0.08);
+  /* Fit within screen: constrained by width, height (4:3), and 800px max */
+  width: min(800px, 100vw, calc(100vh * 4 / 3));
+  width: min(800px, 100dvw, calc(100dvh * 4 / 3));
+  aspect-ratio: 4 / 3;
 }
 
 #game-canvas {
   display: block;
+  width: 100%;
+  height: 100%;
   image-rendering: pixelated;
+  touch-action: none;
+}
+
+/* ── Touch controls ───────────────────────────────────────────────── */
+
+/* Hidden by default on all devices; JS toggles [hidden] during gameplay */
+.touch-ctrl {
+  display: none;
+  touch-action: none;
+}
+
+/* On touch devices: show when the [hidden] attribute is absent */
+@media (pointer: coarse) {
+  .touch-ctrl:not([hidden]) {
+    display: flex;
+  }
+
+  /* Portrait: leave room at bottom for fixed controls */
+  body {
+    padding-bottom: 170px;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 170px);
+    align-items: flex-start;
+    padding-top: 16px;
+  }
+
+  /* Re-constrain canvas for portrait: width-first, leave 170px below */
+  #game-container {
+    width: min(800px, 100vw, calc((100vh - 170px) * 4 / 3));
+    width: min(800px, 100dvw, calc((100dvh - 170px) * 4 / 3));
+  }
+}
+
+/* D-pad: fixed bottom-left */
+#dpad {
+  position: fixed;
+  bottom: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  left: 12px;
+  left: calc(env(safe-area-inset-left, 0px) + 12px);
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  z-index: 10;
+}
+
+/* Action buttons: fixed bottom-right */
+#action-btns {
+  position: fixed;
+  bottom: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  right: 12px;
+  right: calc(env(safe-area-inset-right, 0px) + 12px);
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 10;
+}
+
+/* Landscape touch: shift controls to sides, let canvas fill height */
+@media (pointer: coarse) and (orientation: landscape) {
+  body {
+    padding-bottom: 0;
+    align-items: center;
+    padding-top: 0;
+  }
+
+  #game-container {
+    /* Width constrained by side controls (130px each) and viewport */
+    width: min(800px, calc(100dvh * 4 / 3), calc(100dvw - 280px));
+    height: 100dvh;
+    aspect-ratio: auto;
+  }
+
+  #dpad {
+    bottom: auto;
+    top: 50%;
+    left: calc(env(safe-area-inset-left, 0px) + 8px);
+    transform: translateY(-50%);
+  }
+
+  #action-btns {
+    bottom: auto;
+    top: 50%;
+    right: calc(env(safe-area-inset-right, 0px) + 8px);
+    transform: translateY(-50%);
+  }
+}
+
+/* Desktop: never show touch controls */
+@media (pointer: fine) {
+  .touch-ctrl {
+    display: none !important;
+  }
+}
+
+/* D-pad inner layout */
+.dpad-middle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+.dpad-center {
+  width: 44px;
+  height: 44px;
+}
+
+/* Base button */
+.ctrl-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 18px;
+  font-family: monospace;
+  cursor: pointer;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: background 0.08s, transform 0.08s;
+}
+
+.ctrl-btn:active {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(0.9);
+}
+
+/* Fire button */
+.fire-btn {
+  width: 68px;
+  height: 68px;
+  font-size: 30px;
+  background: rgba(220, 50, 50, 0.25);
+  border-color: rgba(255, 80, 80, 0.5);
+}
+
+/* Flip button */
+#btn-flip {
+  width: auto;
+  min-width: 52px;
+  padding: 0 12px;
+  border-radius: 20px;
+  height: 38px;
+  font-size: 12px;
+  background: rgba(60, 180, 255, 0.15);
+  border-color: rgba(60, 180, 255, 0.4);
+}
+
+
+/* ── Mobile text input overlay ───────────────────────────────────── */
+#text-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  touch-action: auto;
+}
+
+#text-overlay[hidden] {
+  display: none !important;
+}
+
+#text-overlay-inner {
+  background: #1a1a1a;
+  border: 2px solid #ffe84a;
+  border-radius: 10px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(320px, 90vw);
+}
+
+#text-overlay-label {
+  color: #aaa;
+  font-family: monospace;
+  font-size: 14px;
+  text-align: center;
+}
+
+#text-overlay-input {
+  background: #000;
+  border: 2px solid #ffe84a;
+  color: #fff;
+  font-family: monospace;
+  font-size: 26px;
+  padding: 10px;
+  border-radius: 6px;
+  text-align: center;
+  letter-spacing: 6px;
+  outline: none;
+  width: 100%;
+  text-transform: uppercase;
+}
+
+#text-overlay-submit {
+  background: #ffe84a;
+  color: #000;
+  border: none;
+  padding: 12px;
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
 }

@@ -151,6 +151,7 @@ class Game {
 
       // ── 2-player sub-menu ──────────────────────────────────────────────────
       if (this.state === 'multi_menu') {
+        if (e.code === 'KeyL') { this.player2Mode = 'local'; this.startGame(); }
         if (e.code === 'KeyA') { this.player2Mode = 'ai'; this.startGame(); }
         if (e.code === 'KeyO') {
           this.gameMode     = 'online';
@@ -207,7 +208,155 @@ class Game {
     };
 
     window.addEventListener('keydown', this._onKeyboard);
+    this._setupTouchControls();
+    this.canvas.addEventListener('pointerdown', (e) => this._onCanvasTap(e));
     requestAnimationFrame(this._loop.bind(this));
+  }
+
+  // ── Touch / mobile ──────────────────────────────────────────────────────────
+
+  _setupTouchControls() {
+    const isTouchDevice = navigator.maxTouchPoints > 0;
+    if (!isTouchDevice) return;
+
+    const pairs = [
+      ['btn-up',    'ArrowUp'],
+      ['btn-down',  'ArrowDown'],
+      ['btn-left',  'ArrowLeft'],
+      ['btn-right', 'ArrowRight'],
+      ['btn-fire',  'Space'],
+      ['btn-flip',  'KeyR'],
+    ];
+
+    for (const [id, code] of pairs) {
+      const btn = document.getElementById(id);
+      if (!btn) continue;
+      btn.addEventListener('touchstart',  (e) => { e.preventDefault(); this.input.press(code);   }, { passive: false });
+      btn.addEventListener('touchend',    (e) => { e.preventDefault(); this.input.release(code); }, { passive: false });
+      btn.addEventListener('touchcancel', (e) => { e.preventDefault(); this.input.release(code); }, { passive: false });
+    }
+  }
+
+  _updateTouchControls() {
+    const show = this.state === 'playing' || this.state === 'paused';
+    const dpad    = document.getElementById('dpad');
+    const actions = document.getElementById('action-btns');
+    if (dpad)    dpad.hidden    = !show;
+    if (actions) actions.hidden = !show;
+  }
+
+  // Maps a pointerdown on the (scaled) canvas to a logical game action.
+  _onCanvasTap(e) {
+    if (!e.isPrimary) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const lx   = (e.clientX - rect.left) * CANVAS_W / rect.width;
+    const ly   = (e.clientY - rect.top)  * CANVAS_H / rect.height;
+    const cx   = CANVAS_W / 2;
+    const cy   = CANVAS_H / 2;
+    const hit  = (x, y, w, h) => lx >= x && lx < x + w && ly >= y && ly < y + h;
+
+    switch (this.state) {
+      case 'start': {
+        const btnW = 160, btnH = 32, btnY = 158;
+        const bx   = cx - (2 * btnW + 12) / 2;
+        if (hit(bx,             btnY, btnW, btnH)) { this.gameMode = 'single'; return; }
+        if (hit(bx + btnW + 12, btnY, btnW, btnH)) { this.gameMode = 'multi';  return; }
+        if (ly > 200) {
+          if (this.gameMode === 'multi') this.state = 'multi_menu';
+          else this.startGame();
+        }
+        return;
+      }
+      case 'multi_menu': {
+        const btnW = 300, btnH = 52;
+        if (hit(cx - btnW / 2, cy - 130, btnW, btnH)) { this.player2Mode = 'local'; this.startGame(); return; }
+        if (hit(cx - btnW / 2, cy - 62,  btnW, btnH)) { this.player2Mode = 'ai'; this.startGame(); return; }
+        if (hit(cx - btnW / 2, cy + 6,   btnW, btnH)) { this.gameMode = 'online'; this.networkError = ''; this.state = 'online_menu'; return; }
+        if (ly > cy + 88) this.state = 'start';
+        return;
+      }
+      case 'online_menu': {
+        const btnW = 280, btnH = 48;
+        if (hit(cx - btnW / 2, cy - 70, btnW, btnH)) { this._hostGame(); return; }
+        if (hit(cx - btnW / 2, cy - 8,  btnW, btnH)) { this.codeInput = ''; this.networkError = ''; this.state = 'joining'; return; }
+        if (ly > cy + 64) { this.state = 'start'; this.networkError = ''; }
+        return;
+      }
+      case 'hosting':
+        this.network?.disconnect();
+        this.network   = null;
+        this.roomCode  = '';
+        this.state     = 'online_menu';
+        return;
+      case 'joining':
+        this._showMobileInput();
+        return;
+      case 'levelcomplete':
+        if (!this.network?.isGuest) this._nextLevel();
+        return;
+      case 'gameover':
+      case 'victory':
+        this.nameInput    = '';
+        this.pendingScore = this.score;
+        this.state        = 'nameentry';
+        return;
+      case 'nameentry':
+        this._showMobileInput();
+        return;
+      case 'paused':
+        if (!this.network?.isGuest) this.state = 'playing';
+        return;
+    }
+  }
+
+  // Shows a native text overlay for mobile code/name entry.
+  _showMobileInput() {
+    if (!window.matchMedia('(pointer: coarse)').matches) return;
+    const isJoining = this.state === 'joining';
+
+    const overlay  = document.getElementById('text-overlay');
+    const labelEl  = document.getElementById('text-overlay-label');
+    const inputEl  = document.getElementById('text-overlay-input');
+    const submitEl = document.getElementById('text-overlay-submit');
+
+    if (isJoining) {
+      labelEl.textContent        = 'Enter 4-character room code';
+      inputEl.maxLength          = 4;
+      inputEl.value              = this.codeInput;
+      inputEl.style.letterSpacing = '8px';
+    } else {
+      labelEl.textContent        = 'Enter your name (max 12 chars)';
+      inputEl.maxLength          = 12;
+      inputEl.value              = this.nameInput;
+      inputEl.style.letterSpacing = '2px';
+    }
+
+    overlay.hidden = false;
+    setTimeout(() => inputEl.focus(), 50);
+
+    const cleanup = () => {
+      overlay.hidden = true;
+      submitEl.removeEventListener('click', onSubmit);
+      inputEl.removeEventListener('keydown', onKey);
+    };
+
+    const onSubmit = () => {
+      const val = inputEl.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, inputEl.maxLength);
+      cleanup();
+      if (isJoining) {
+        this.codeInput = val.substring(0, 4);
+        if (this.codeInput.length === 4) this._joinRoom(this.codeInput);
+      } else {
+        this.nameInput = inputEl.value.substring(0, 12);
+        this._saveScore();
+        this.state = 'start';
+      }
+    };
+
+    const onKey = (e) => { if (e.key === 'Enter') onSubmit(); };
+
+    submitEl.addEventListener('click', onSubmit);
+    inputEl.addEventListener('keydown', onKey);
   }
 
   // ── Scoreboard ──────────────────────────────────────────────────────────────
@@ -570,6 +719,7 @@ class Game {
   }
 
   renderFrame() {
+    this._updateTouchControls();
     const r = this.renderer;
     r.clear();
 

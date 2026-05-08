@@ -202,41 +202,53 @@ export class RenderSystem {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffe84a';
     ctx.font = 'bold 38px monospace';
-    ctx.fillText('2 PLAYER MODE', cx, cy - 120);
+    ctx.fillText('2 PLAYER MODE', cx, cy - 160);
 
     ctx.fillStyle = '#444';
-    ctx.fillRect(cx - 200, cy - 98, 400, 1);
+    ctx.fillRect(cx - 200, cy - 138, 400, 1);
 
-    const btnW = 300, btnH = 60;
+    const btnW = 300, btnH = 52;
+
+    // Local co-op button
+    ctx.fillStyle = '#3a3a2a';
+    ctx.fillRect(cx - btnW / 2, cy - 130, btnW, btnH);
+    ctx.strokeStyle = '#ffe84a';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx - btnW / 2, cy - 130, btnW, btnH);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 18px monospace';
+    ctx.fillText('L  —  Local Co-op', cx, cy - 100);
+    ctx.fillStyle = '#888';
+    ctx.font = '12px monospace';
+    ctx.fillText('2 players, 1 device  (WASD+F for P2)', cx, cy - 82);
 
     // AI companion button
     ctx.fillStyle = '#2a5a3a';
-    ctx.fillRect(cx - btnW / 2, cy - 80, btnW, btnH);
+    ctx.fillRect(cx - btnW / 2, cy - 62, btnW, btnH);
     ctx.strokeStyle = '#3aaa88';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(cx - btnW / 2, cy - 80, btnW, btnH);
+    ctx.strokeRect(cx - btnW / 2, cy - 62, btnW, btnH);
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 18px monospace';
-    ctx.fillText('A  —  AI Companion', cx, cy - 47);
+    ctx.fillText('A  —  AI Companion', cx, cy - 32);
     ctx.fillStyle = '#888';
     ctx.font = '12px monospace';
-    ctx.fillText('Computer controls P2  (fights for you)', cx, cy - 28);
+    ctx.fillText('Computer controls P2  (fights for you)', cx, cy - 14);
 
-    // Online with friend button
+    // Online button
     ctx.fillStyle = '#2a3a6a';
-    ctx.fillRect(cx - btnW / 2, cy + 4, btnW, btnH);
+    ctx.fillRect(cx - btnW / 2, cy + 6, btnW, btnH);
     ctx.strokeStyle = '#4488ff';
-    ctx.strokeRect(cx - btnW / 2, cy + 4, btnW, btnH);
+    ctx.strokeRect(cx - btnW / 2, cy + 6, btnW, btnH);
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 18px monospace';
-    ctx.fillText('O  —  Play with a Friend', cx, cy + 37);
+    ctx.fillText('O  —  Play Online', cx, cy + 36);
     ctx.fillStyle = '#888';
     ctx.font = '12px monospace';
-    ctx.fillText('Each player on their own computer', cx, cy + 56);
+    ctx.fillText('Each player on their own device', cx, cy + 54);
 
     ctx.fillStyle = '#555';
     ctx.font = '13px monospace';
-    ctx.fillText('ESC — Back', cx, cy + 102);
+    ctx.fillText('ESC — Back', cx, cy + 88);
 
     ctx.textAlign = 'left';
   }
